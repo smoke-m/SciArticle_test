@@ -1,0 +1,2 @@
+faststream[rabbit]
+fastapi==0.78.0
