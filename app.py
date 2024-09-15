@@ -25,7 +25,7 @@ class User(BaseModel):
 async def send_message(room_id: str, message: Message):
     # Публикуем сообщение в очередь RabbitMQ,
     # используя room_id как ключ маршрутизации
-    await router.publish(message.dict(), routing_key=room_id)
+    await router.publisher(message.dict(), routing_key=room_id)
     return {"status": "Message sent"}
 
 
@@ -37,7 +37,7 @@ async def get_updates(
 
     # Подписываемся на очередь RabbitMQ,
     # используя room_id в качестве ключа маршрутизации
-    async with router.subscribe(routing_key=room_id) as subscriber:
+    async with router.subscriber(routing_key=room_id) as subscriber:
         async for message in subscriber:
             # Отправляем полученное сообщение пользователю через вебсокет
             await websocket.send_json(message)
