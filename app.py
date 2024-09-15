@@ -1,5 +1,5 @@
 from fastapi import Depends, FastAPI, WebSocket
-from faststream.rabbit.fastapi import RabbitRouter
+from faststream.rabbit.fastapi import RabbitRouter, Logger
 from pydantic import BaseModel
 
 router = RabbitRouter("amqp://guest:guest@localhost:5672/")
@@ -22,16 +22,17 @@ class User(BaseModel):
 
 
 @router.post('/send/{room_id}')
-async def send_message(room_id: str, message: Message):
+async def send_message(room_id: str, message: Message, logger: Logger):
     # Публикуем сообщение в очередь RabbitMQ,
     # используя room_id как ключ маршрутизации
-    await router.publisher(message.dict(), routing_key=room_id)
+    await router.publisher(message.dict(), routing_key=room_id,)
+    logger.info({"status": "Message sent"})
     return {"status": "Message sent"}
 
 
 @router.websocket('/updates/{room_id}')
 async def get_updates(
-    websocket: WebSocket, room_id: str, user: User = Depends()
+    websocket: WebSocket, room_id: str, logger: Logger, user: User = Depends()
 ):
     await websocket.accept()
 
@@ -41,6 +42,7 @@ async def get_updates(
         async for message in subscriber:
             # Отправляем полученное сообщение пользователю через вебсокет
             await websocket.send_json(message)
+            logger.info("Message sent")
 
 
 app.include_router(router)
