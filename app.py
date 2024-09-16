@@ -21,10 +21,24 @@ class User(BaseModel):
     name: str
 
 
+class Room(BaseModel):
+    users_count: int
+
+
+async def count_dep(room: Room) -> bool:
+    return room.users_count == 2
+
+
 @router.post('/send/{room_id}')
-async def send_message(room_id: str, message: Message, logger: Logger):
+async def send_message(
+    room_id: str,
+    message: Message,
+    logger: Logger,
+    dep: bool = Depends(count_dep)
+):
     # Публикуем сообщение в очередь RabbitMQ,
     # используя room_id как ключ маршрутизации
+    assert dep is True
     await router.publisher(message.dict(), routing_key=room_id,)
     logger.info({"status": "Message sent"})
     return {"status": "Message sent"}
@@ -32,7 +46,10 @@ async def send_message(room_id: str, message: Message, logger: Logger):
 
 @router.websocket('/updates/{room_id}')
 async def get_updates(
-    websocket: WebSocket, room_id: str, logger: Logger, user: User = Depends()
+    websocket: WebSocket,
+    room_id: str,
+    logger: Logger,
+    user: User = Depends(),
 ):
     await websocket.accept()
 
